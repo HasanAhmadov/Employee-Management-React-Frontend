@@ -6,6 +6,7 @@ import { AuthProvider } from "./context/Authcontext";
 import EmployeeList from "./pages/Employee/EmployeeList";
 import EmployeeLog from "./pages/employeelog/EmployeeLog";
 import PermissionDashboard from "./pages/Permission/Permission";
+import VacationDashboard from "./pages/Vacation/Vacation";
 
 function App() {
   return (
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PermissionDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vacations"
+            element={
+              <ProtectedRoute>
+                <VacationDashboard />
               </ProtectedRoute>
             }
           />

@@ -1,8 +1,17 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../../services/authService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [userId, setUserId] = useState("");
+
+  useEffect(() => {
+    const id = localStorage.getItem("userId");
+    if (id) {
+      setUserId(id);
+    }
+  }, []);
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -12,25 +21,25 @@ const Dashboard = () => {
   };
 
   const sections = [
-    { 
-      name: "Employees", 
+    {
+      name: "Employees",
       path: "/employees",
-      icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+      icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
     },
-    { 
-      name: "Employee Logs", 
+    {
+      name: "Employee Logs",
       path: "/logs",
-      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
     },
-    { 
-      name: "Permissions", 
+    {
+      name: "Permissions",
       path: "/permissions",
-      icon: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+      icon: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z",
     },
-    { 
-      name: "Vacations", 
+    {
+      name: "Vacations",
       path: "/vacations",
-      icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+      icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
     },
   ];
 
@@ -48,7 +57,7 @@ const Dashboard = () => {
             Employee Portal
           </h1>
         </div>
-        
+
         <div className="flex items-center space-x-6">
           <button
             onClick={handleLogout}
@@ -61,6 +70,13 @@ const Dashboard = () => {
           </button>
         </div>
       </header>
+
+      {/* Centered User ID */}
+      <div className="text-center mt-8">
+        <p className="inline-block bg-blue-100 text-blue-700 px-6 py-3 rounded-xl text-lg font-medium shadow-sm">
+          Your ID: <span className="font-semibold">{userId}</span>
+        </p>
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12">

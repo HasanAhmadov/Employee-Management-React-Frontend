@@ -13,7 +13,10 @@ import {
   Pending as PendingIcon,
   EventAvailable as EventAvailableIcon,
   EventBusy as EventBusyIcon,
-  Dashboard as DashboardIcon
+  Dashboard as DashboardIcon,
+  FilterList as FilterIcon,
+  Refresh as RefreshIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -37,58 +40,123 @@ import {
   TextField,
   Avatar,
   styled,
-  Tooltip
+  Tooltip,
+  Tabs,
+  Tab,
+  Menu,
+  MenuItem,
+  Fade,
+  useTheme,
+  alpha,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useAuth } from '../../context/Authcontext';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import Badge from '@mui/material/Badge';
+import IconButton from '@mui/material/IconButton';
 
 const API_BASE_URL = 'http://localhost:5042/api';
 const permissionApi = axios.create({ baseURL: `${API_BASE_URL}/Permission` });
 const employeeApi = axios.create({ baseURL: `${API_BASE_URL}/Employee` });
 
-// Styled Components
+// Chromatic color palette
+const chromaticColors = {
+  primary: '#6C5CE7',
+  secondary: '#FD79A8',
+  success: '#00B894',
+  error: '#D63031',
+  warning: '#FDCB6E',
+  info: '#0984E3',
+  purple: '#A569BD',
+  orange: '#E67E22',
+  teal: '#1ABC9C'
+};
+
+// Enhanced styled components with chromatic colors
 const GradientCard = styled(Card)(({ theme }) => ({
-  background: 'linear-gradient(145deg, #ffffff, #f8f9fa)',
-  borderRadius: '16px',
-  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.1)',
-  backdropFilter: 'blur(8px)',
+  background: `linear-gradient(135deg, ${alpha(chromaticColors.primary, 0.1)} 0%, ${alpha(chromaticColors.secondary, 0.1)} 100%)`,
+  backdropFilter: 'blur(12px)',
+  borderRadius: '24px',
+  boxShadow: `0 12px 40px ${alpha(chromaticColors.purple, 0.2)}`,
   border: '1px solid rgba(255, 255, 255, 0.3)',
   overflow: 'hidden',
+  position: 'relative',
+  '&:before': {
+    content: '""',
+    position: 'absolute',
+    top: '-50%',
+    left: '-50%',
+    width: '200%',
+    height: '200%',
+    background: `radial-gradient(circle, ${alpha(chromaticColors.info, 0.1)} 0%, transparent 70%)`,
+    animation: 'rotate 15s linear infinite',
+    '@keyframes rotate': {
+      '0%': { transform: 'rotate(0deg)' },
+      '100%': { transform: 'rotate(360deg)' }
+    }
+  }
 }));
 
 const StatusBadge = styled(Chip)(({ theme, status }) => ({
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  fontSize: '0.7rem',
-  padding: theme.spacing(0.5),
-  ...(status === 'Approved' && {
-    backgroundColor: 'rgba(46, 204, 113, 0.2)',
-    color: '#2ecc71',
-  }),
-  ...(status === 'Rejected' && {
-    backgroundColor: 'rgba(231, 76, 60, 0.2)',
-    color: '#e74c3c',
-  }),
-  ...(status === 'Pending' && {
-    backgroundColor: 'rgba(241, 196, 15, 0.2)',
-    color: '#f1c40f',
-  }),
+  borderRadius: '12px',
+  fontWeight: 700,
+  fontSize: '0.75rem',
+  padding: '6px 12px',
+  backgroundColor: 
+    status === 'Approved' ? alpha(chromaticColors.success, 0.15) :
+    status === 'Rejected' ? alpha(chromaticColors.error, 0.15) :
+    alpha(chromaticColors.warning, 0.15),
+  color: 
+    status === 'Approved' ? chromaticColors.success :
+    status === 'Rejected' ? chromaticColors.error :
+    chromaticColors.warning,
+  border: `2px solid ${
+    status === 'Approved' ? chromaticColors.success :
+    status === 'Rejected' ? chromaticColors.error :
+    chromaticColors.warning
+  }`,
+  boxShadow: `0 2px 8px ${
+    status === 'Approved' ? alpha(chromaticColors.success, 0.2) :
+    status === 'Rejected' ? alpha(chromaticColors.error, 0.2) :
+    alpha(chromaticColors.warning, 0.2)
+  }`
 }));
 
-const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: '12px',
-  padding: theme.spacing(1, 2),
+const GlowBadge = styled(Badge)(({ theme, color }) => ({
+  '& .MuiBadge-badge': {
+    borderRadius: '12px',
+    padding: '8px 12px',
+    fontWeight: 'bold',
+    fontSize: '0.9rem',
+    minWidth: '36px',
+    height: '32px',
+    backgroundColor: chromaticColors[color] || chromaticColors.primary,
+    color: 'white',
+    boxShadow: `0 0 12px ${alpha(chromaticColors[color] || chromaticColors.primary, 0.7)}`,
+    border: `1px solid white`
+  }
+}));
+
+const SoftButton = styled(Button)(({ theme }) => ({
+  borderRadius: '14px',
+  padding: '12px 24px',
   textTransform: 'none',
   fontWeight: 600,
-  transition: 'all 0.3s ease',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+  letterSpacing: '0.5px',
+  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+    transform: 'translateY(-3px)',
+    boxShadow: `0 6px 16px ${alpha(chromaticColors.primary, 0.3)}`
   },
+  '&:active': {
+    transform: 'translateY(1px)'
+  }
 }));
 
 const ModalBox = styled(Box)(({ theme }) => ({
@@ -98,10 +166,13 @@ const ModalBox = styled(Box)(({ theme }) => ({
   transform: 'translate(-50%, -50%)',
   width: '500px',
   backgroundColor: theme.palette.background.paper,
-  borderRadius: '16px',
-  boxShadow: theme.shadows[10],
+  borderRadius: '24px',
+  boxShadow: `0 24px 48px ${alpha(chromaticColors.purple, 0.3)}`,
   padding: theme.spacing(4),
   outline: 'none',
+  border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+  background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha(theme.palette.background.default, 0.9)} 100%)`,
+  backdropFilter: 'blur(12px)'
 }));
 
 const mapStatus = (code) => {
@@ -126,6 +197,7 @@ const formatDate = (iso) => {
 };
 
 export default function PermissionPage() {
+  const theme = useTheme();
   const { authenticated, user } = useAuth();
   const navigate = useNavigate();
   const [permissions, setPermissions] = useState([]);
@@ -133,9 +205,11 @@ export default function PermissionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(0);
   const [openRequestModal, setOpenRequestModal] = useState(false);
   const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
   const [requestForm, setRequestForm] = useState({
     reason: '',
@@ -267,9 +341,45 @@ export default function PermissionPage() {
     setSuccess(null);
   };
 
-  const handleDashboardClick = () => {
-    navigate('/dashboard');
+  const handleFilterClick = (event) => {
+    setFilterAnchorEl(event.currentTarget);
   };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedPermissions = React.useMemo(() => {
+    let sortableItems = [...permissions];
+    if (sortConfig.key) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [permissions, sortConfig]);
+
+  const allPermissions = sortedPermissions;
+  const pending = sortedPermissions.filter(p => p.statusText === 'Pending');
+
+  const filteredPermissions = [
+    allPermissions,
+    pending
+  ];
 
   if (!authenticated && !loading) return (
     <Box 
@@ -279,66 +389,162 @@ export default function PermissionPage() {
       minHeight="80vh"
       textAlign="center"
     >
-      <Typography variant="h6" color="textSecondary">
-        Please log in to view permissions.
-      </Typography>
+      <GradientCard sx={{ p: 6, textAlign: 'center', maxWidth: '600px' }}>
+        <Typography variant="h5" color="text.secondary" mb={3}>
+          Please log in to view permissions
+        </Typography>
+        <SoftButton
+          variant="contained"
+          color="primary"
+          onClick={() => navigate('/login')}
+          sx={{
+            background: `linear-gradient(45deg, ${chromaticColors.primary} 0%, ${chromaticColors.secondary} 100%)`,
+            color: 'white'
+          }}
+        >
+          Go to Login
+        </SoftButton>
+      </GradientCard>
     </Box>
   );
-
-  const allPermissions = permissions;
-  const pending = permissions.filter(p => p.statusText === 'Pending');
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ 
-        p: 4, 
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
-        minHeight: '100vh'
-      }}>
-        {/* Background decorative elements */}
-        <Box sx={{
+        p: { xs: 2, md: 4 }, 
+        minHeight: '100vh',
+        background: theme.palette.mode === 'light' 
+          ? `linear-gradient(135deg, #f9f9ff 0%, #f0f2ff 100%)` 
+          : `linear-gradient(135deg, #0f0f23 0%, #1a1a3a 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        '&:before': {
+          content: '""',
           position: 'absolute',
           top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: `radial-gradient(circle at 20% 30%, ${alpha(chromaticColors.purple, 0.1)} 0%, transparent 50%)`,
+          zIndex: 0
+        },
+        '&:after': {
+          content: '""',
+          position: 'absolute',
+          bottom: 0,
           right: 0,
-          width: '300px',
-          height: '300px',
-          background: 'radial-gradient(circle, rgba(100,115,255,0.1) 0%, rgba(0,0,0,0) 70%)',
+          width: '100%',
+          height: '100%',
+          background: `radial-gradient(circle at 80% 70%, ${alpha(chromaticColors.teal, 0.1)} 0%, transparent 50%)`,
+          zIndex: 0
+        }
+      }}>
+        {/* Floating decorative elements */}
+        <Box sx={{
+          position: 'absolute',
+          top: '10%',
+          right: '5%',
+          width: '200px',
+          height: '200px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(chromaticColors.secondary, 0.2)} 0%, transparent 70%)`,
+          filter: 'blur(20px)',
           zIndex: 0
         }} />
         <Box sx={{
           position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: '400px',
-          height: '400px',
-          background: 'radial-gradient(circle, rgba(255,100,100,0.1) 0%, rgba(0,0,0,0) 70%)',
+          bottom: '10%',
+          left: '5%',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(chromaticColors.primary, 0.2)} 0%, transparent 70%)`,
+          filter: 'blur(30px)',
           zIndex: 0
         }} />
 
+        {/* Main content with higher z-index */}
         <Box position="relative" zIndex={1}>
-          {/* Header Section */}
+          {/* Header */}
           <Box sx={{ mb: 4 }}>
-            <Box display="flex" alignItems="center" mb={2}>
+            <Box display="flex" alignItems="center" mb={2} flexWrap="wrap">
               <Avatar sx={{ 
-                bgcolor: 'primary.main', 
-                mr: 2,
-                width: 56, 
-                height: 56 
+                bgcolor: chromaticColors.primary, 
+                mr: 2, 
+                width: 64, 
+                height: 64,
+                boxShadow: `0 8px 24px ${alpha(chromaticColors.primary, 0.4)}`
               }}>
                 <EventAvailableIcon fontSize="large" />
               </Avatar>
               <Box>
-                <Typography variant="h3" sx={{ 
-                  fontWeight: 700,
-                  background: 'linear-gradient(45deg, #3f51b5 30%, #2196f3 90%)',
+                <Typography variant="h3" fontWeight="bold" color="text.primary" sx={{
+                  background: `linear-gradient(45deg, ${chromaticColors.primary} 30%, ${chromaticColors.secondary} 90%)`,
                   WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: `0 2px 10px ${alpha(chromaticColors.primary, 0.2)}`
                 }}>
                   Permission Management
                 </Typography>
-                <Typography variant="subtitle1" color="textSecondary">
-                  Manage and track employee permissions and requests
+                <Typography variant="subtitle1" color="text.secondary">
+                  Manage and track employee permissions with style
                 </Typography>
+              </Box>
+              <Box ml="auto" display="flex" alignItems="center">
+                <IconButton
+                  onClick={refresh}
+                  sx={{
+                    bgcolor: alpha(chromaticColors.info, 0.2),
+                    color: chromaticColors.info,
+                    mr: 1,
+                    '&:hover': {
+                      bgcolor: alpha(chromaticColors.info, 0.3),
+                      transform: 'rotate(360deg)',
+                      transition: 'transform 0.7s ease'
+                    }
+                  }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+                <SoftButton
+                  variant="contained"
+                  startIcon={<FilterIcon />}
+                  onClick={handleFilterClick}
+                  sx={{
+                    bgcolor: alpha(chromaticColors.purple, 0.2),
+                    color: chromaticColors.purple,
+                    '&:hover': {
+                      bgcolor: alpha(chromaticColors.purple, 0.3)
+                    }
+                  }}
+                >
+                  Filter & Sort
+                </SoftButton>
+                <Menu
+                  anchorEl={filterAnchorEl}
+                  open={Boolean(filterAnchorEl)}
+                  onClose={handleFilterClose}
+                  TransitionComponent={Fade}
+                  PaperProps={{
+                    sx: {
+                      borderRadius: '16px',
+                      bgcolor: 'background.paper',
+                      boxShadow: `0 8px 32px ${alpha(chromaticColors.purple, 0.2)}`,
+                      minWidth: '200px',
+                      p: 1
+                    }
+                  }}
+                >
+                  <MenuItem onClick={() => { handleSort('createdAt'); handleFilterClose(); }}>
+                    Sort by Date {sortConfig.key === 'createdAt' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </MenuItem>
+                  <MenuItem onClick={() => { handleSort('status'); handleFilterClose(); }}>
+                    Sort by Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </MenuItem>
+                  <MenuItem onClick={() => { handleSort('requesterName'); handleFilterClose(); }}>
+                    Sort by Requester {sortConfig.key === 'requesterName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </MenuItem>
+                </Menu>
               </Box>
             </Box>
           </Box>
@@ -347,221 +553,256 @@ export default function PermissionPage() {
           <Box sx={{ mb: 4 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={3}>
-                <ActionButton
+                <SoftButton
                   fullWidth
                   variant="contained"
                   startIcon={<DashboardIcon />}
-                  onClick={handleDashboardClick}
+                  onClick={() => navigate('/dashboard')}
                   sx={{
-                    background: 'linear-gradient(45deg, #9C27B0 30%, #E91E63 90%)',
-                    color: 'white',
-                    height: '56px'
+                    height: '56px',
+                    background: `linear-gradient(45deg, ${chromaticColors.info} 0%, ${chromaticColors.teal} 100%)`,
+                    color: 'white'
                   }}
                 >
                   Back to Dashboard
-                </ActionButton>
+                </SoftButton>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <ActionButton
+                <SoftButton
                   fullWidth
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => setOpenRequestModal(true)}
                   sx={{
-                    background: 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
-                    color: 'white',
-                    height: '56px'
+                    height: '56px',
+                    background: `linear-gradient(45deg, ${chromaticColors.secondary} 0%, ${chromaticColors.purple} 100%)`,
+                    color: 'white'
                   }}
                 >
                   Request Permission
-                </ActionButton>
+                </SoftButton>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <ActionButton
+                <SoftButton
                   fullWidth
                   variant="contained"
                   startIcon={<PersonSearchIcon />}
                   onClick={() => setOpenCreateModal(true)}
                   sx={{
-                    background: 'linear-gradient(45deg, #2196F3 30%, #03A9F4 90%)',
-                    color: 'white',
-                    height: '56px'
+                    height: '56px',
+                    background: `linear-gradient(45deg, ${chromaticColors.orange} 0%, ${chromaticColors.warning} 100%)`,
+                    color: 'white'
                   }}
                 >
                   Create for Employee
-                </ActionButton>
+                </SoftButton>
               </Grid>
             </Grid>
           </Box>
 
           {/* Tabs */}
           <Box sx={{ mb: 3 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              borderBottom: 1, 
-              borderColor: 'divider',
-              '& button': {
-                borderRadius: '8px 8px 0 0',
-                mx: 0.5,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '0.9375rem'
-              }
-            }}>
-              <Button 
-                onClick={() => setActiveTab('all')} 
-                sx={{
-                  color: activeTab === 'all' ? 'primary.main' : 'text.secondary',
-                  bgcolor: activeTab === 'all' ? 'rgba(63, 81, 181, 0.08)' : 'transparent',
-                }}
-              >
-                All Permissions
-                <Chip 
-                  label={allPermissions.length} 
-                  size="small" 
-                  sx={{ 
-                    ml: 1, 
-                    bgcolor: activeTab === 'all' ? 'primary.light' : 'grey.300',
-                    color: activeTab === 'all' ? 'primary.contrastText' : 'text.primary'
-                  }} 
+            <Tabs
+              value={activeTab}
+              onChange={(e, newValue) => setActiveTab(newValue)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTabs-indicator': {
+                  height: '4px',
+                  borderRadius: '4px',
+                  background: `linear-gradient(45deg, ${chromaticColors.primary} 0%, ${chromaticColors.secondary} 100%)`
+                }
+              }}
+            >
+              {['All Permissions', 'Pending Approvals'].map((label, index) => (
+                <Tab
+                  key={label}
+                  label={
+                    <Box display="flex" alignItems="center">
+                      {label}
+                      <Chip
+                        label={filteredPermissions[index].length}
+                        size="small"
+                        sx={{ 
+                          ml: 1,
+                          bgcolor: activeTab === index ? 'white' : alpha(chromaticColors.primary, 0.1),
+                          color: activeTab === index ? chromaticColors.primary : 'text.primary',
+                          fontWeight: 600
+                        }}
+                      />
+                    </Box>
+                  }
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    color: activeTab === index ? chromaticColors.primary : 'text.secondary',
+                    minHeight: '48px',
+                    '&:hover': {
+                      color: chromaticColors.primary
+                    }
+                  }}
                 />
-              </Button>
-              <Button 
-                onClick={() => setActiveTab('pending')} 
-                disabled={!pending.length}
-                sx={{
-                  color: activeTab === 'pending' ? 'warning.main' : 'text.secondary',
-                  bgcolor: activeTab === 'pending' ? 'rgba(255, 152, 0, 0.08)' : 'transparent',
-                }}
-              >
-                Pending Approvals
-                <Chip 
-                  label={pending.length} 
-                  size="small" 
-                  sx={{ 
-                    ml: 1, 
-                    bgcolor: activeTab === 'pending' ? 'warning.light' : 'grey.300',
-                    color: activeTab === 'pending' ? 'warning.contrastText' : 'text.primary'
-                  }} 
-                />
-              </Button>
-            </Box>
+              ))}
+            </Tabs>
           </Box>
 
           {/* Content */}
           <GradientCard>
             {loading ? (
-              <Box display="flex" justifyContent="center" py={8}>
-                <CircularProgress size={60} thickness={4} sx={{ color: 'primary.main' }} />
+              <Box display="flex" justifyContent="center" alignItems="center" p={6} minHeight="300px">
+                <CircularProgress 
+                  size={80} 
+                  thickness={5} 
+                  sx={{ 
+                    color: chromaticColors.primary,
+                    '& circle': {
+                      strokeLinecap: 'round'
+                    }
+                  }} 
+                />
               </Box>
             ) : (
-              <TableContainer>
-                <Table sx={{ minWidth: 750 }}>
-                  <TableHead sx={{ bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+              <TableContainer component={Paper} elevation={0} sx={{ 
+                borderRadius: '18px',
+                background: alpha(theme.palette.background.paper, 0.8),
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
+              }}>
+                <Table>
+                  <TableHead sx={{ 
+                    background: `linear-gradient(90deg, ${alpha(chromaticColors.primary, 0.05)} 0%, ${alpha(chromaticColors.secondary, 0.05)} 100%)`
+                  }}>
                     <TableRow>
-                      {activeTab === 'all' ? (
+                      {activeTab === 0 ? (
                         <>
-                          <TableCell sx={{ fontWeight: 700 }}>Requester</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Period</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Created</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Requester</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Target</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Reason</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Period</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Status</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Created</TableCell>
                         </>
                       ) : (
                         <>
-                          <TableCell sx={{ fontWeight: 700 }}>Requester</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Period</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Created</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Requester</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Target</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Reason</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Period</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Created</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', color: 'text.primary' }}>Actions</TableCell>
                         </>
                       )}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {activeTab === 'all' ? (
-                      allPermissions.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                            <Typography color="textSecondary">
-                              No permission records found
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        allPermissions.map(p => (
-                          <TableRow 
-                            key={p.id} 
-                            hover
-                            sx={{ '&:last-child td': { borderBottom: 0 } }}
-                          >
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <Avatar sx={{ 
-                                  bgcolor: 'primary.light', 
-                                  color: 'primary.main',
-                                  width: 32, 
-                                  height: 32, 
-                                  mr: 2,
-                                  fontSize: '0.875rem'
-                                }}>
-                                  {p.requesterName ? p.requesterName.charAt(0) : '?'}
-                                </Avatar>
+                    {filteredPermissions[activeTab].length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={activeTab === 0 ? 6 : 7} align="center" sx={{ py: 6 }}>
+                          <Typography variant="h6" color="text.secondary">
+                            {activeTab === 0 ? 'No permission records found' : 'No pending permissions to approve'}
+                          </Typography>
+                          <DescriptionIcon sx={{ 
+                            fontSize: '64px', 
+                            color: alpha(theme.palette.text.secondary, 0.3),
+                            mt: 2
+                          }} />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredPermissions[activeTab].map((p) => (
+                        <TableRow 
+                          key={p.id}
+                          component={motion.tr}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          hover
+                          sx={{ 
+                            '&:last-child td': { borderBottom: 0 },
+                            '&:hover': {
+                              backgroundColor: alpha(chromaticColors.primary, 0.03)
+                            }
+                          }}
+                        >
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <Avatar sx={{ 
+                                bgcolor: alpha(chromaticColors.primary, 0.2), 
+                                color: chromaticColors.primary,
+                                width: 36, 
+                                height: 36, 
+                                mr: 2,
+                                fontSize: '0.875rem',
+                                fontWeight: 600
+                              }}>
+                                {p.requesterName ? p.requesterName.charAt(0) : '?'}
+                              </Avatar>
+                              <Typography>
                                 {p.requesterName || p.requesterId}
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <Avatar sx={{ 
-                                  bgcolor: 'secondary.light', 
-                                  color: 'secondary.main',
-                                  width: 32, 
-                                  height: 32, 
-                                  mr: 2,
-                                  fontSize: '0.875rem'
-                                }}>
-                                  {p.targetName ? p.targetName.charAt(0) : '?'}
-                                </Avatar>
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <Avatar sx={{ 
+                                bgcolor: alpha(chromaticColors.secondary, 0.2), 
+                                color: chromaticColors.secondary,
+                                width: 36, 
+                                height: 36, 
+                                mr: 2,
+                                fontSize: '0.875rem',
+                                fontWeight: 600
+                              }}>
+                                {p.targetName ? p.targetName.charAt(0) : '?'}
+                              </Avatar>
+                              <Typography>
                                 {p.targetName || p.targetEmployeeId}
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ maxWidth: 300 }}>
-                              <Tooltip title={p.reason} placement="top" arrow>
-                                <Typography 
-                                  sx={{ 
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  {p.reason}
-                                </Typography>
-                              </Tooltip>
-                            </TableCell>
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 300 }}>
+                            <Tooltip title={p.reason} placement="top" arrow>
+                              <Typography 
+                                sx={{ 
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {p.reason}
+                              </Typography>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <EventAvailableIcon sx={{ 
+                                mr: 1, 
+                                color: chromaticColors.success,
+                                fontSize: '20px'
+                              }} />
+                              <Typography variant="body2">
+                                {formatDate(p.beginDate)}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center">
+                              <EventBusyIcon sx={{ 
+                                mr: 1, 
+                                color: chromaticColors.error,
+                                fontSize: '20px'
+                              }} />
+                              <Typography variant="body2">
+                                {formatDate(p.endDate)}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          {activeTab === 0 && (
                             <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <EventAvailableIcon color="action" fontSize="small" sx={{ mr: 1 }} />
-                                <Typography variant="body2">
-                                  {formatDate(p.beginDate)}
-                                </Typography>
-                              </Box>
-                              <Box display="flex" alignItems="center">
-                                <EventBusyIcon color="action" fontSize="small" sx={{ mr: 1 }} />
-                                <Typography variant="body2">
-                                  {formatDate(p.endDate)}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge 
-                                label={p.statusText} 
+                              <StatusBadge
+                                label={p.statusText}
                                 status={p.statusText}
                                 icon={
                                   p.statusText === 'Approved' ? <ApprovedIcon fontSize="small" /> :
@@ -570,128 +811,46 @@ export default function PermissionPage() {
                                 }
                               />
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {formatDate(p.createdAt)}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )
-                    ) : (
-                      pending.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                            <Typography color="textSecondary">
-                              No pending permissions to approve
+                          )}
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(p.createdAt)}
                             </Typography>
                           </TableCell>
-                        </TableRow>
-                      ) : (
-                        pending.map(p => (
-                          <TableRow 
-                            key={p.id} 
-                            hover
-                            sx={{ '&:last-child td': { borderBottom: 0 } }}
-                          >
+                          {activeTab === 1 && (
                             <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <Avatar sx={{ 
-                                  bgcolor: 'primary.light', 
-                                  color: 'primary.main',
-                                  width: 32, 
-                                  height: 32, 
-                                  mr: 2,
-                                  fontSize: '0.875rem'
-                                }}>
-                                  {p.requesterName ? p.requesterName.charAt(0) : '?'}
-                                </Avatar>
-                                {p.requesterName || p.requesterId}
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <Avatar sx={{ 
-                                  bgcolor: 'secondary.light', 
-                                  color: 'secondary.main',
-                                  width: 32, 
-                                  height: 32, 
-                                  mr: 2,
-                                  fontSize: '0.875rem'
-                                }}>
-                                  {p.targetName ? p.targetName.charAt(0) : '?'}
-                                </Avatar>
-                                {p.targetName || p.targetEmployeeId}
-                              </Box>
-                            </TableCell>
-                            <TableCell sx={{ maxWidth: 300 }}>
-                              <Tooltip title={p.reason} placement="top" arrow>
-                                <Typography 
-                                  sx={{ 
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  {p.reason}
-                                </Typography>
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <EventAvailableIcon color="action" fontSize="small" sx={{ mr: 1 }} />
-                                <Typography variant="body2">
-                                  {formatDate(p.beginDate)}
-                                </Typography>
-                              </Box>
-                              <Box display="flex" alignItems="center">
-                                <EventBusyIcon color="action" fontSize="small" sx={{ mr: 1 }} />
-                                <Typography variant="body2">
-                                  {formatDate(p.endDate)}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {formatDate(p.createdAt)}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" gap={1}>
-                                <ActionButton
+                              <Box display="flex" gap={2}>
+                                <SoftButton
                                   variant="contained"
                                   size="small"
                                   startIcon={<CheckIcon />}
                                   onClick={() => handleStatusChange(p.id, 1)}
                                   sx={{
-                                    bgcolor: 'success.light',
-                                    color: 'success.contrastText',
-                                    '&:hover': { bgcolor: 'success.main' }
+                                    minWidth: '120px',
+                                    background: `linear-gradient(45deg, ${chromaticColors.success} 0%, ${chromaticColors.teal} 100%)`,
+                                    color: 'white'
                                   }}
                                 >
                                   Approve
-                                </ActionButton>
-                                <ActionButton
+                                </SoftButton>
+                                <SoftButton
                                   variant="contained"
                                   size="small"
                                   startIcon={<CloseIcon />}
                                   onClick={() => handleStatusChange(p.id, 2)}
                                   sx={{
-                                    bgcolor: 'error.light',
-                                    color: 'error.contrastText',
-                                    '&:hover': { bgcolor: 'error.main' }
+                                    minWidth: '120px',
+                                    background: `linear-gradient(45deg, ${chromaticColors.error} 0%, ${chromaticColors.orange} 100%)`,
+                                    color: 'white'
                                   }}
                                 >
                                   Reject
-                                </ActionButton>
+                                </SoftButton>
                               </Box>
                             </TableCell>
-                          </TableRow>
-                        ))
-                      )
+                          )}
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
@@ -702,10 +861,30 @@ export default function PermissionPage() {
           {/* Request Permission Modal */}
           <Modal open={openRequestModal} onClose={() => setOpenRequestModal(false)}>
             <ModalBox>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
-                Request New Permission
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
+              <Box display="flex" alignItems="center" mb={2}>
+                <Avatar sx={{ 
+                  bgcolor: chromaticColors.primary, 
+                  mr: 2,
+                  color: 'white',
+                  width: 48,
+                  height: 48,
+                  boxShadow: `0 4px 12px ${alpha(chromaticColors.primary, 0.3)}`
+                }}>
+                  <AddIcon />
+                </Avatar>
+                <Typography variant="h5" fontWeight="bold" sx={{
+                  background: `linear-gradient(45deg, ${chromaticColors.primary} 0%, ${chromaticColors.secondary} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  Request New Permission
+                </Typography>
+              </Box>
+              <Divider sx={{ 
+                mb: 3,
+                background: `linear-gradient(90deg, transparent 0%, ${alpha(chromaticColors.primary, 0.3)} 50%, transparent 100%)`,
+                height: '2px'
+              }} />
               <form onSubmit={handleRequestSubmit}>
                 <TextField
                   fullWidth
@@ -717,9 +896,20 @@ export default function PermissionPage() {
                   multiline
                   rows={4}
                   variant="outlined"
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    sx: {
+                      borderRadius: '14px',
+                      '& fieldset': {
+                        borderColor: alpha(chromaticColors.primary, 0.3)
+                      },
+                      '&:hover fieldset': {
+                        borderColor: chromaticColors.primary
+                      }
+                    }
+                  }}
                 />
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   <Grid item xs={12} sm={6}>
                     <DateTimePicker
                       label="Start Date & Time"
@@ -731,7 +921,18 @@ export default function PermissionPage() {
                           fullWidth 
                           margin="normal" 
                           required 
-                          variant="outlined" 
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '& fieldset': {
+                                borderColor: alpha(chromaticColors.primary, 0.3)
+                              },
+                              '&:hover fieldset': {
+                                borderColor: chromaticColors.primary
+                              }
+                            }
+                          }}
                         />
                       )}
                     />
@@ -747,35 +948,51 @@ export default function PermissionPage() {
                           fullWidth 
                           margin="normal" 
                           required 
-                          variant="outlined" 
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '& fieldset': {
+                                borderColor: alpha(chromaticColors.primary, 0.3)
+                              },
+                              '&:hover fieldset': {
+                                borderColor: chromaticColors.primary
+                              }
+                            }
+                          }}
                         />
                       )}
                     />
                   </Grid>
                 </Grid>
                 <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
-                  <ActionButton
+                  <SoftButton
                     onClick={() => setOpenRequestModal(false)}
                     variant="outlined"
                     sx={{
-                      borderColor: 'grey.300',
-                      color: 'text.primary',
-                      '&:hover': { borderColor: 'grey.400' }
+                      color: 'text.secondary',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        borderColor: chromaticColors.error,
+                        color: chromaticColors.error
+                      }
                     }}
                   >
                     Cancel
-                  </ActionButton>
-                  <ActionButton
+                  </SoftButton>
+                  <SoftButton
                     type="submit"
                     variant="contained"
                     sx={{
-                      bgcolor: 'primary.main',
+                      background: `linear-gradient(45deg, ${chromaticColors.primary} 0%, ${chromaticColors.secondary} 100%)`,
                       color: 'white',
-                      '&:hover': { bgcolor: 'primary.dark' }
+                      '&:hover': {
+                        boxShadow: `0 6px 20px ${alpha(chromaticColors.primary, 0.4)}`
+                      }
                     }}
                   >
                     Submit Request
-                  </ActionButton>
+                  </SoftButton>
                 </Box>
               </form>
             </ModalBox>
@@ -784,10 +1001,30 @@ export default function PermissionPage() {
           {/* Create for Employee Modal */}
           <Modal open={openCreateModal} onClose={() => setOpenCreateModal(false)}>
             <ModalBox>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
-                Create Permission for Employee
-              </Typography>
-              <Divider sx={{ mb: 3 }} />
+              <Box display="flex" alignItems="center" mb={2}>
+                <Avatar sx={{ 
+                  bgcolor: chromaticColors.orange, 
+                  mr: 2,
+                  color: 'white',
+                  width: 48,
+                  height: 48,
+                  boxShadow: `0 4px 12px ${alpha(chromaticColors.orange, 0.3)}`
+                }}>
+                  <PersonSearchIcon />
+                </Avatar>
+                <Typography variant="h5" fontWeight="bold" sx={{
+                  background: `linear-gradient(45deg, ${chromaticColors.orange} 0%, ${chromaticColors.warning} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  Create Permission for Employee
+                </Typography>
+              </Box>
+              <Divider sx={{ 
+                mb: 3,
+                background: `linear-gradient(90deg, transparent 0%, ${alpha(chromaticColors.orange, 0.3)} 50%, transparent 100%)`,
+                height: '2px'
+              }} />
               <form onSubmit={handleCreateSubmit}>
                 <TextField
                   fullWidth
@@ -797,7 +1034,18 @@ export default function PermissionPage() {
                   margin="normal"
                   required
                   variant="outlined"
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    sx: {
+                      borderRadius: '14px',
+                      '& fieldset': {
+                        borderColor: alpha(chromaticColors.primary, 0.3)
+                      },
+                      '&:hover fieldset': {
+                        borderColor: chromaticColors.primary
+                      }
+                    }
+                  }}
                 />
                 <TextField
                   fullWidth
@@ -809,9 +1057,20 @@ export default function PermissionPage() {
                   multiline
                   rows={4}
                   variant="outlined"
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    sx: {
+                      borderRadius: '14px',
+                      '& fieldset': {
+                        borderColor: alpha(chromaticColors.primary, 0.3)
+                      },
+                      '&:hover fieldset': {
+                        borderColor: chromaticColors.primary
+                      }
+                    }
+                  }}
                 />
-                <Grid container spacing={2}>
+                <Grid container spacing={3}>
                   <Grid item xs={12} sm={6}>
                     <DateTimePicker
                       label="Start Date & Time"
@@ -823,7 +1082,18 @@ export default function PermissionPage() {
                           fullWidth 
                           margin="normal" 
                           required 
-                          variant="outlined" 
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '& fieldset': {
+                                borderColor: alpha(chromaticColors.primary, 0.3)
+                              },
+                              '&:hover fieldset': {
+                                borderColor: chromaticColors.primary
+                              }
+                            }
+                          }}
                         />
                       )}
                     />
@@ -839,74 +1109,98 @@ export default function PermissionPage() {
                           fullWidth 
                           margin="normal" 
                           required 
-                          variant="outlined" 
+                          variant="outlined"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '& fieldset': {
+                                borderColor: alpha(chromaticColors.primary, 0.3)
+                              },
+                              '&:hover fieldset': {
+                                borderColor: chromaticColors.primary
+                              }
+                            }
+                          }}
                         />
                       )}
                     />
                   </Grid>
                 </Grid>
                 <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
-                  <ActionButton
+                  <SoftButton
                     onClick={() => setOpenCreateModal(false)}
                     variant="outlined"
                     sx={{
-                      borderColor: 'grey.300',
-                      color: 'text.primary',
-                      '&:hover': { borderColor: 'grey.400' }
+                      color: 'text.secondary',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        borderColor: chromaticColors.error,
+                        color: chromaticColors.error
+                      }
                     }}
                   >
                     Cancel
-                  </ActionButton>
-                  <ActionButton
+                  </SoftButton>
+                  <SoftButton
                     type="submit"
                     variant="contained"
                     sx={{
-                      bgcolor: 'primary.main',
+                      background: `linear-gradient(45deg, ${chromaticColors.primary} 0%, ${chromaticColors.secondary} 100%)`,
                       color: 'white',
-                      '&:hover': { bgcolor: 'primary.dark' }
+                      '&:hover': {
+                        boxShadow: `0 6px 20px ${alpha(chromaticColors.primary, 0.4)}`
+                      }
                     }}
                   >
                     Create Permission
-                  </ActionButton>
+                  </SoftButton>
                 </Box>
               </form>
             </ModalBox>
           </Modal>
 
           {/* Notifications */}
-          <Snackbar 
-            open={!!error} 
-            autoHideDuration={6000} 
+          <Snackbar
+            open={!!error}
+            autoHideDuration={6000}
             onClose={handleCloseSnackbar}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            TransitionComponent={Fade}
           >
             <Alert 
-              onClose={handleCloseSnackbar} 
               severity="error" 
-              sx={{ 
-                width: '100%',
-                bgcolor: 'error.main',
+              onClose={handleCloseSnackbar}
+              sx={{
+                borderRadius: '14px',
+                boxShadow: `0 8px 24px ${alpha(chromaticColors.error, 0.2)}`,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.error.light, 0.9)} 0%, ${alpha(theme.palette.error.dark, 0.9)} 100%)`,
                 color: 'white',
-                boxShadow: 3
+                '& .MuiAlert-icon': {
+                  color: 'white'
+                }
               }}
             >
               {error}
             </Alert>
           </Snackbar>
-          <Snackbar 
-            open={!!success} 
-            autoHideDuration={6000} 
+          <Snackbar
+            open={!!success}
+            autoHideDuration={6000}
             onClose={handleCloseSnackbar}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            TransitionComponent={Fade}
           >
             <Alert 
-              onClose={handleCloseSnackbar} 
               severity="success" 
-              sx={{ 
-                width: '100%',
-                bgcolor: 'success.main',
+              onClose={handleCloseSnackbar}
+              sx={{
+                borderRadius: '14px',
+                boxShadow: `0 8px 24px ${alpha(chromaticColors.success, 0.2)}`,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.success.light, 0.9)} 0%, ${alpha(theme.palette.success.dark, 0.9)} 100%)`,
                 color: 'white',
-                boxShadow: 3
+                '& .MuiAlert-icon': {
+                  color: 'white'
+                }
               }}
             >
               {success}
