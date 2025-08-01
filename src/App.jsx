@@ -23,7 +23,7 @@ function App() {
             }
           />
           <Route
-            path="/employees"
+            path="/employees/*"
             element={
               <ProtectedRoute>
                 <EmployeeList />

@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     setAuthenticated(false);
   };
 
-  if (authenticated === null) return null; // Optional: or show loading spinner
+  if (authenticated === null) return null;
 
   return (
     <AuthContext.Provider

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Clock, FileText, Users, Calendar, CheckCircle, AlertCircle, Activity } from 'lucide-react';
+import { User, Clock, FileText, Users, Calendar, CheckCircle, AlertCircle, Activity, LogIn, LogOut } from 'lucide-react';
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:5042/api/EmployeeLog',
 });
 
-// Updated helper function to format date/time
+// Helper function to format date/time
 const formatDateTime = (dateTimeString, showTime = true) => {
   if (!dateTimeString) return 'N/A';
   
@@ -58,10 +58,38 @@ export default function EmployeeLogDashboard() {
     }
   };
 
-  const logEntry = () => handleApiCall(
-    () => api.post('/LogEntry', { action: logAction }, { headers: { Authorization: `Bearer ${token}` } }),
-    'logEntry'
-  );
+  const logEntry = async () => {
+    setLoading(true);
+    setResponseType('logEntry');
+    try {
+      const res = await api.post('/LogEntry', { action: logAction }, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      
+      // Custom success messages based on action
+      let successMessage = 'Log entry successful';
+      let isEnter = false;
+      let isExit = false;
+      
+      if (logAction.toLowerCase().includes('enter') || logAction.toLowerCase().includes('in')) {
+        successMessage = 'Successfully logged entry (Employee entered)';
+        isEnter = true;
+      } else if (logAction.toLowerCase().includes('exit') || logAction.toLowerCase().includes('out')) {
+        successMessage = 'Successfully logged exit (Employee exited)';
+        isExit = true;
+      }
+      
+      setResponse({ 
+        message: successMessage,
+        isEnter,
+        isExit
+      });
+    } catch (error) {
+      setResponse({ error: `Error: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getLogsByEmployeeId = () => handleApiCall(
     () => api.get(`/GetLogsByEmployeeId/${employeeId}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -111,13 +139,18 @@ export default function EmployeeLogDashboard() {
     }
 
     if (responseType === 'logEntry') {
+      const isEnter = response.isEnter;
+      const isExit = response.isExit;
+      
       return (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200">
-          <div className="flex items-center text-green-700 mb-2">
-            <CheckCircle className="mr-2" size={20} />
+        <div className={`bg-gradient-to-r ${isEnter ? 'from-green-50 to-emerald-50' : isExit ? 'from-blue-50 to-indigo-50' : 'from-green-50 to-emerald-50'} p-6 rounded-2xl border ${isEnter ? 'border-green-200' : isExit ? 'border-blue-200' : 'border-green-200'}`}>
+          <div className={`flex items-center ${isEnter ? 'text-green-700' : isExit ? 'text-blue-700' : 'text-green-700'} mb-2`}>
+            {isEnter ? <LogIn className="mr-2" size={20} /> : isExit ? <LogOut className="mr-2" size={20} /> : <CheckCircle className="mr-2" size={20} />}
             <span className="font-semibold">Success!</span>
           </div>
-          <p className="text-green-600">{typeof response === 'string' ? response : 'Log entry successful'}</p>
+          <p className={isEnter ? 'text-green-600' : isExit ? 'text-blue-600' : 'text-green-600'}>
+            {response.message}
+          </p>
         </div>
       );
     }
@@ -162,7 +195,11 @@ export default function EmployeeLogDashboard() {
                             <span className="font-medium text-gray-900">{String(value)}</span>
                           </div>
                         ) : key.toLowerCase().includes('action') ? (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                            String(value).toLowerCase().includes('enter') ? 'bg-green-100 text-green-800' :
+                            String(value).toLowerCase().includes('exit') ? 'bg-red-100 text-red-800' :
+                            'bg-orange-100 text-orange-800'
+                          }`}>
                             <Activity className="mr-1" size={14} />
                             {String(value)}
                           </span>
@@ -364,7 +401,7 @@ export default function EmployeeLogDashboard() {
                   <div className="relative">
                     <input
                       className="w-full border-2 border-gray-200 rounded-2xl p-4 text-lg focus:ring-4 focus:ring-green-400/20 focus:border-green-400 transition-all duration-300 bg-white/50 backdrop-blur-sm"
-                      placeholder="Enter your action..."
+                      placeholder="Enter 'enter' or 'exit' action..."
                       value={logAction}
                       onChange={(e) => setLogAction(e.target.value)}
                     />
@@ -372,7 +409,7 @@ export default function EmployeeLogDashboard() {
                   <button
                     className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
                     onClick={logEntry}
-                    disabled={loading}
+                    disabled={loading || !logAction.trim()}
                   >
                     {loading && responseType === 'logEntry' ? (
                       <div className="flex items-center justify-center">
@@ -380,7 +417,7 @@ export default function EmployeeLogDashboard() {
                         Processing...
                       </div>
                     ) : (
-                      'Submit Log Entry'
+                      `Submit ${logAction.toLowerCase().includes('enter') ? 'Entry' : logAction.toLowerCase().includes('exit') ? 'Exit' : 'Log'}`
                     )}
                   </button>
                 </div>
@@ -411,7 +448,7 @@ export default function EmployeeLogDashboard() {
                     <button
                       className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 px-4 rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.03] shadow-lg flex items-center justify-center space-x-2"
                       onClick={getLogsByEmployeeId}
-                      disabled={loading}
+                      disabled={loading || !employeeId.trim()}
                     >
                       <FileText size={16} />
                       <span>Get Logs</span>
@@ -420,7 +457,7 @@ export default function EmployeeLogDashboard() {
                     <button
                       className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.03] shadow-lg flex items-center justify-center space-x-2"
                       onClick={getAttendanceByEmployeeId}
-                      disabled={loading}
+                      disabled={loading || !employeeId.trim()}
                     >
                       <Clock size={16} />
                       <span>Attendance</span>
